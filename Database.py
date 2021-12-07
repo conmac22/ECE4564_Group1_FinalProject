@@ -46,16 +46,17 @@ class Database:
 
     def Find_all(self, warehouse, _collection=None, _attempt=None):
         db = self.cluster[warehouse]
+        posts = []
         if _collection == None:
             for post in db.find():
-                print(post)
+                posts.append(post)
+            return posts
         elif _attempt == None:
             collection = db[_collection]
+            posts = []
             for post in collection.find():
-                print(post)
+                posts.append(post)
+            return posts
         else:
             collection = db[_collection]
-            print(collection.find_one({"Attempt":_attempt}))
-
-
-
+            return collection.find_one({"Attempt":_attempt})
