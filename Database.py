@@ -57,6 +57,12 @@ class Database:
             for post in collection.find():
                 posts.append(post)
             return posts
-        else:
-            collection = db[_collection]
-            return collection.find_one({"Attempt":_attempt})
+        collection = db[_collection]
+        return collection.find_one({"Attempt":_attempt})
+
+    def Delete_Many(self, warehouse, _collection=None, _attempt=None, query):
+        db = self.cluster[warehouse]
+        if _collection == None:
+            return db.deleteMany(query)
+        collection = db[_collection]
+        return collection.deleteMany(query)
