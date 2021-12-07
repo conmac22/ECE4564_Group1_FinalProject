@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, abort, make_response, request, url_for
+from flask import Flask, jsonify, make_response, request
 from flask_httpauth import HTTPBasicAuth
 import requests
 import pymongo
@@ -6,76 +6,74 @@ import Keys
 import pickle
 import socket
 import threading
+import json
+import Database
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
+db = Database()
+
+SOCKET_SIZE = 1024
+PORT = 5000
 
 # View lifter info
-@app.route('/view/lifter', methods=['GET'])
-def view_lifter():
+@app.route('/view', methods=['GET'])
+def view():
     lifter_name = request.args.get('lifter_name')
-    # Connect to MongoDB
-    mongo_assword = Keys.mongo_db_password
-    cluster = pymongo.MongoClient('mongodb+srv://seans_laptop:' + mongoPassword + '@cluster0.kvaed.mongodb.net/Cluster0?retryWrites=true&w=majority')
-    db = cluster["ECE4564_Final_Project"]
-    collection = db["competition_data"]
-    
-# View lift info
-@app.route('/view/lift', methods=['GET'])
-def view_lifter():
     lift_name = request.args.get('lift_name')
-    # Connect to MongoDB
-    mongo_assword = Keys.mongo_db_password
-    cluster = pymongo.MongoClient('mongodb+srv://seans_laptop:' + mongoPassword + '@cluster0.kvaed.mongodb.net/Cluster0?retryWrites=true&w=majority')
-    db = cluster["ECE4564_Final_Project"]
-    collection = db["competition_data"]
-    
-    if lift == 'squat':
-        i = 0 #Placeholder
-        
-    if lift == 'bench':
-        i = 0 #Placeholder
-        
-    if lift == 'deadlift':
-        i = 0 #Placeholder
-        
-# Change meet info
-@app.route('/view/lifter', methods=['POST', 'PUT', 'DELETE'])
+
+    # Lifter data only
+    if lift_name == '':
+        lifter_data = db.Find_all(lifter_name)
+        return jsonify("lifter_data": lifter_data)
+    # Lifter data + lift data
+    lift_data = db.Find_all(lifter_name, lift_name)
+    return jsonify("lift_data": lift_data)
+
+# Change lifter info
+@app.route('/view/change', methods=['POST', 'PUT', 'DELETE'])
 @auth.login_required
-def change_info():
+def change():
     operation = request.args.get('operation')
-    # Connect to MongoDB
-    mongo_assword = Keys.mongo_db_password
-    cluster = pymongo.MongoClient('mongodb+srv://seans_laptop:' + mongoPassword + '@cluster0.kvaed.mongodb.net/Cluster0?retryWrites=true&w=majority')
-    db = cluster["ECE4564_Final_Project"]
-    collection = db["competition_data"]
-    
-    if operation == 'add':
-        i = 0 #Placeholder
-        
-    if operation == 'update':
-        i = 0 #Placeholder
-        
+    lifter_name = request.args.get("lifter_name")
+    lift_name = request.args.get("lift_name")
+    attempt = request.args.get("request")
+    attempt_one = request.args.get("attempt_one")
+    attempt_two = request.args.get("attempt_two")
+    attempt_three = request.args.get("attempt_three")
+
+    if operation == 'add_lift' or operation == 'update':
+        db.Insert_one(lifter_name, lift_name, attempt, [judge_one, judge_two, judge_three])
+
     if operation == 'delete':
-        i = 0 #Placeholder
-        
+        db.Delete_many(lifter_name, lift_name, attempt, outcome)
+
 def connect_to_recorder():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((HOST,SERVER_PORT))
+    s.bind(('', PORT))
     s.listen()
-    
+
     recorder, addr = s.accept()
     while True:
         try:
-            i = 0 # Placehlder
-            # Deserialize recorder data
-            # Store in mongoDB
+            payload_serialized = client.recv(SOCKET_SIZE)
+            payload_json = pickle.loads(payload_serialized)
+            payload = json.load(payload_json)
+
+            lifter = payload['lifter']
+            lift = payload['lift']
+            attempt = payload['attempt']
+            attempt_one = payload['attempt_one']
+            attempt_two = payload['attempt_two']
+            attempt_three = payload['attempt_three']
+
+            db.Insert_one(lifter, lift, attempt, [attempt_one, attempt_two, attempt_three])
+            print("Lift recorded")
+
         except KeyboardInterrupt:
             print('No longer connected to recorder')
             client.close()
             break;
-            
-    
 
 if __name__ == '__main__':
     socket_thread = threading.Thread(target=connect_to_recorder)
