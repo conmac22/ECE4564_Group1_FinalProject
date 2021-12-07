@@ -23,8 +23,8 @@ class Database:
         db = self.cluster[warehouse]
         collection = db[_collection]
         MsgID = "1$" + str(time.time())
-        Lifter = warehouse
-        Lift = _collection
+        lifter = warehouse
+        lift = _collection
 
         if attempt < 0 or attempt > 3:
             return False
@@ -39,7 +39,7 @@ class Database:
         else:
             return False
 
-        document = {"MsgID":MsgID, "Lifter":Lifter, "Lift":Lift, "Attempt":attempt, "Outcome":outcome, "Overall":overall}
+        document = {"MsgID":MsgID, "lifter":Lifter, "lift":Lift, "attempt":attempt, "outcome":outcome, "overall":overall}
         collection.insert_one(document)
 
         return True
@@ -58,9 +58,9 @@ class Database:
                 posts.append(post)
             return posts
         collection = db[_collection]
-        return collection.find_one({"Attempt":_attempt})
+        return collection.find_one({"attempt":_attempt})
 
-    def Delete_Many(self, warehouse, _collection=None, _attempt=None, query):
+    def Delete_many(self, warehouse, _collection=None, _attempt=None, query):
         db = self.cluster[warehouse]
         if _collection == None:
             return db.deleteMany(query)
