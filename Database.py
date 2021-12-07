@@ -18,19 +18,20 @@ class Database:
         self.cluster = pymongo.MongoClient(
             'mongodb+srv://' + username + ':' + mongoPassword + '@cluster0.kvaed.mongodb.net/Cluster0?retryWrites=true&w=majority')
 
-    def Insert_one(self, warehouse, _collection, attempt, outcome):
-        # Insert a lift into the database
+    # Add, update
+    def insert_one(self, warehouse, _collection, attempt, outcomes):
         db = self.cluster[warehouse]
         collection = db[_collection]
-        MsgID = "1$" + str(time.time())
+        msgID = "1$" + str(time.time())
         lifter = warehouse
         lift = _collection
 
         if attempt < 0 or attempt > 3:
             return False
-        elif len(outcome) == 3:
+
+        elif len(outcomes) == 3:
             total = 0
-            for result in outcome:
+            for result in outcomes:
                 total += result
                 if total < 2:
                     overall = "Fail"
@@ -39,12 +40,13 @@ class Database:
         else:
             return False
 
-        document = {"MsgID":MsgID, "lifter":Lifter, "lift":Lift, "attempt":attempt, "outcome":outcome, "overall":overall}
+        document = {"MsgID": msgID, "lifter": lifter, "lift": lift, "attempt": attempt, "outcomes": outcomes, "overall": overall}
         collection.insert_one(document)
 
         return True
 
-    def Find_all(self, warehouse, _collection=None, _attempt=None):
+    # View
+    def find_all(self, warehouse, _collection=None, _attempt=None):
         db = self.cluster[warehouse]
         posts = []
         if _collection == None:
@@ -53,14 +55,14 @@ class Database:
             return posts
         elif _attempt == None:
             collection = db[_collection]
-            posts = []
             for post in collection.find():
                 posts.append(post)
             return posts
         collection = db[_collection]
         return collection.find_one({"attempt":_attempt})
 
-    def Delete_many(self, warehouse, _collection=None, _attempt=None, query):
+    # Delete
+    def delete_many(self, warehouse, _collection=None, _attempt=None, query):
         db = self.cluster[warehouse]
         if _collection == None:
             return db.deleteMany(query)
