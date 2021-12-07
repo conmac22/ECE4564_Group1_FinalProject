@@ -62,7 +62,7 @@ class Database:
         return collection.find_one({"attempt":_attempt})
 
     # Delete
-    def delete_many(self, warehouse, _collection=None, _attempt=None, query):
+    def delete_many(self, warehouse, _collection=None, _attempt=None, query=None):
         db = self.cluster[warehouse]
         if _collection == None:
             return db.deleteMany(query)

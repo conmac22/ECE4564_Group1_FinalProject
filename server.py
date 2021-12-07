@@ -29,7 +29,7 @@ def view():
     # Lifter data + lift data
     lift_data = db.Find_all(lifter_name, lift_name)
     return lift_data
-    
+
 # Change lifter info
 @app.route('/view/change', methods=['POST', 'PUT', 'DELETE'])
 @auth.login_required
@@ -49,6 +49,7 @@ def change():
         db.Delete_many(lifter_name, lift_name, attempt, outcome)
 
 def connect_to_recorder():
+    db = Database()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('', PORT))
     s.listen()
@@ -78,4 +79,4 @@ def connect_to_recorder():
 if __name__ == '__main__':
     socket_thread = threading.Thread(target=connect_to_recorder)
     socket_thread.start()
-    app.run(host='0.0.0.0')
+    #app.run(host='0.0.0.0')
