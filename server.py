@@ -25,11 +25,11 @@ def view():
     # Lifter data only
     if lift_name == '':
         lifter_data = db.Find_all(lifter_name)
-        return jsonify("lifter_data": lifter_data)
+        return lifter_data
     # Lifter data + lift data
     lift_data = db.Find_all(lifter_name, lift_name)
-    return jsonify("lift_data": lift_data)
-
+    return lift_data
+    
 # Change lifter info
 @app.route('/view/change', methods=['POST', 'PUT', 'DELETE'])
 @auth.login_required
