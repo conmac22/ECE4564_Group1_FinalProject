@@ -1,7 +1,7 @@
 '''
 Class server for running a web server for queries and running a socket connection for input data
 Author: Connor Mackert
-Date last modified: 7 December, 2021
+Date last modified: 8 December, 2021
 '''
 
 from flask import Flask, jsonify, make_response, request
@@ -33,11 +33,11 @@ def view():
     
     # Check validity
     if competition_name == None:
-        return display_help()
+        return display_help_view()
     if search_key == None and search_value != None:
-        return display_help()
+        return display_help_view()
     if search_key != None and search_value == None:
-        return display_help()
+        return display_help_view()
     
     # Display all competition data
     if lifter_name == None and search_key == None and search_value == None:
@@ -46,7 +46,7 @@ def view():
     
     # Display all lifts for specific lifter
     if search_key == None and search_value == None:
-        lifter_data == db.find(_competition=competition_name, _lifter=lifter_name)
+        lifter_data = db.find(_competition=competition_name, _lifter=lifter_name)
         return modified_dumps(lifter_data)
     
     # Search whole competition for query
@@ -58,26 +58,93 @@ def view():
     lifter_data = db.find(_competition=competition_name, _lifter=lifter_name, query_key=search_key, query_value=search_value)
     return modified_dumps(lifter_data)
 
-def display_help():
-    return 'USAGE:\n\nMUST Specify competition_name\nAll lifts for a certain lifter: ?competition_name="competition name"&lifter_name="name"\nLifts for a certain lifter that match criteria: ?competition_name="competition name"&lifter="name"&search_key="search key"&search_value="search value"\nAll lifters in competition that match critera: ?competition_name="competition name"&search_key="search key"&search_value="search value\nAll lifts in competition: ?competition_name="competition name\n\nVALID SEARCH KEYS:\n\nlifter (underscore between fist and last name)\nlift (Squat/Bench/Deadlift)\nattempt_number\nweight ([number]lbs)\nresult (Pass/Fail)'
-
-# Change lifter info
-@app.route('/view/change', methods=['POST', 'PUT', 'DELETE'])
+# Add lifter data
+@app.route('/add', methods=['GET'])
 @auth.login_required
-def change():
-    operation = request.args.get('operation')
-    lifter_name = request.args.get("lifter_name")
-    lift_name = request.args.get("lift_name")
-    attempt = request.args.get("request")
-    attempt_one = request.args.get("attempt_one")
-    attempt_two = request.args.get("attempt_two")
-    attempt_three = request.args.get("attempt_three")
+def add():  
+    # All possible document data 
+    competition_name = request.args.get('competition_name')
+    lifter_name = request.args.get('lifter_name')
+    lift_name = request.args.get('lift_name')
+    attempt_number = request.args.get('attempt_number')
+    weight = request.args.get('weight')
+    judgement_one = str_to_bool(request.args.get('judgement_one'))
+    judgement_two = str_to_bool(request.args.get('judgement_two'))
+    judgement_three = str_to_bool(request.args.get('judgement_three'))
+    result = request.args.get('result')
+    
+    
+    # Error checking
+    if competition_name == None:
+        return display_help_add()
+    if len(request.args) != 9:
+        return 'Specify all 9 document fields to add data'
+    
+    judgements = [judgement_one, judgement_two, judgement_three]
+    data = {'lifter': lifter_name, 'lift': lift_name, 'attempt_number': attempt_number, 'weight': weight, 'judgements': judgements, 'result': result}
+    return jsonify({'Added': db.add(competition_name, lifter_name, data).acknowledged})
+    
+# Modify lifter data
+@app.route('/update', methods=['GET'])
+@auth.login_required
+def update():
+    competition_name = request.args.get('competition_name')
+    lifter_name = request.args.get('lifter_name')
+    _id = request.args.get('id')
+    key = request.args.get('key')
+    value = request.args.get('value')
+    
+    if competition_name == None:
+        return display_help_update()
+    if lifter_name == None or key == None or value == None:
+        return display_help_update()
+    if key == lifter_name:
+        return 'Cannot update name. Try deleting and adding instead.'
+    
+    return jsonify({'Updated': db.update(competition_name, lifter_name, _id, key, value).acknowledged})
+    
+# Delete lifter data
+@app.route('/delete', methods=['GET'])
+@auth.login_required
+def delete():
+    competition_name = request.args.get('competition_name')
+    lifter_name = request.args.get('lifter_name')
+    search_key = request.args.get('search_key')
+    search_value = request.args.get('search_value')
+    
+    if competition_name == None:
+        return display_help_delete()    
+    if lifter_name == None and search_key == None and search_value == None:
+        return display_help_delete()            
+    if search_key == None and search_value != None:
+        return display_help_delete()
+    if search_key != None and search_value == None:
+        return display_help_delete()
+    
+    if search_key == None and search_value == None:
+        return jsonify({'Deleted': db.delete(competition_name, lifter_name, search_key, search_value)})
+    return jsonify({'Deleted': db.delete(competition_name, lifter_name, search_key, search_value).acknowledged})
 
-    if operation == 'add_lift' or operation == 'update':
-        db.add(lifter_name, lift_name, attempt, [judge_one, judge_two, judge_three])
+def display_help_view():
+    return 'USAGE (Must specify competition name)\n\nAll lifts in competition: curl "http://[server ip]:[5000]/view?competition_name=[competition name]"\nAll lifters in competition that match critera: curl "http://[server ip]:[5000]/view?competition_name=[competition name]&search_key=[search key]&search_value=[search value]"\nAll lifts for a certain lifter: curl "http://[server ip]:[5000]/view?competition_name=[competition name]&lifter_name=[lifter name]"\nAll lifts for a certain lifter that match criteria: curl "http://[server ip]:[5000]/view?competition_name=[competition name]&lifter=[lifter name]&search_key=[search key]&search_value=[search value]"\n\nVALID SEARCH KEYS:\n\nlifter [firstname]_[lastname]\nlift (Squat/Bench/Deadlift)\nattempt_number (1-3)\nweight ([number]lbs)\nresult (Pass/Fail)'        
+def display_help_add():
+    return 'USAGE\n\ncurl -u user:pass "http://[server_ip]:[5000]/add?competition_name=[competition name]&lifter_name=[lifter name]&lift_name=[lift name]&attempt_number=[attempt number]&weight=[weight]&judgememt_one=[judgement one]&judgememt_two=[judgement two]&judgememt_three=[judgement three]&result=[result]"'
+def display_help_update():
+    return 'USAGE\n\ncurl -u user:pass "http://[server_ip]:[5000]/update?competition_name=[competition name]&lifter_name=[lifter name]&id=[document id]key=[key]&value=[value]"\n'
+def display_help_delete():
+    return 'USAGE\n\ncurl -u user:pass "http://[server_ip]:[5000]/delete?competition_name=[competition name]&lifter_name=[lifter name]&search_key=[search key]&search_value=[search value]"\n'
 
-    if operation == 'delete':
-        db.delete(lifter_name, lift_name, attempt, outcome)
+def str_to_bool(string):
+    if string == 'True':
+        return True
+    return False
+        
+# Authentication
+@auth.verify_password
+def verify_password(username, password):
+    if username == 'admin' and password == 'secret':
+        return username
+    return None
 
 def connect_to_recorder():
     db = Database.Database()
@@ -110,7 +177,4 @@ def connect_to_recorder():
 if __name__ == '__main__':
 #     socket_thread = threading.Thread(target=connect_to_recorder)
 #     socket_thread.start()
-#     db = Database.Database()
-#     data = {'lifter': 'Connor Mackert', 'lift': 'Squat', 'attempt_number': '1', 'weight': '465lbs', 'judgements': [True, True, False]}
-#     db.add("USPA_Nationals", "Connor_Mackert", data)
     app.run(host='0.0.0.0', debug=True)
