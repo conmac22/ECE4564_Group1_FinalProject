@@ -6,7 +6,6 @@ Date last modified: 7 December, 2021
 
 import DatabaseKeys
 import pymongo
-import time
 
 class Database:
     def __init__(self):
@@ -22,10 +21,7 @@ class Database:
     def add(self, _competition, _lifter, data):
         competition = self.cluster[_competition]
         lifter = competition[_lifter]
-        msgID = '1$' + str(time.time())
-
-        if data['attempt_number'] < 0 or data['attempt_number'] > 3:
-            return False
+        
         total = 0
         result = 'Error'
         for judgement in data['judgements']:
@@ -38,7 +34,7 @@ class Database:
         else:
             return False
 
-        document = {'MsgID': msgID, 'lifter': data['lifter'], 'lift': data['lift'], 'attempt_number': data['attempt_number'], 'weight': data['weight'], 'judgements': data['judgements'], 'result': result}
+        document = {'lifter': data['lifter'], 'lift': data['lift'], 'attempt_number': data['attempt_number'], 'weight': data['weight'], 'judgements': data['judgements'], 'result': result}
         lifter.insert_one(document)
 
         return True
@@ -49,16 +45,32 @@ class Database:
         
         matches = []
         
-        # Search through all lifters
-        if _lifter == None:
-            for lifter in competition.getCollectionNames():
-                for match in competition[lifter].find({query_key: query_value}):
-                    matches.append(match)
+        # Display all competition data
+        if _lifter == None and query_key == None and query_value == None:
+            for lifter in competition.collection_names():
+                for lift in competition[lifter].find():
+                    matches.append(lift)
                 return matches
-        # Search through specific lifter
+            
+        # Display all lifts for specific lifter
+        if query_key == None and query_value == None:
+            for lift in lifter.find():
+                matches.append(lift)
+            return matches
+            
+        
+        # Search whole competition for query
+        if _lifter == None and query_key != None and query_value != None:
+            for lifter in competition.collection_names():
+                for lift in competition[lifter].find({query_key: query_value}):
+                    matches.append(lift)
+                return matches
+            
+        # Search specific lifter for query
         lifter = competition[_lifter]
-        for match in lifter.find({query_key: query_value}):
-            matches.append(match)
+        print({query_key: query_value})
+        for lift in lifter.find({query_key: query_value}):
+            matches.append(lift)
         return matches
 
     # Delete
@@ -70,11 +82,3 @@ class Database:
             return competition[lifter].drop()
         
         return lifter.deleteMany()
-        
-        
-            
-        db = self.cluster[warehouse]
-        if _collection == None:
-            return db.deleteMany(query)
-        collection = db[_collection]
-        return collection.deleteMany({query_key: query_value})
