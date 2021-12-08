@@ -1,7 +1,7 @@
 '''
 Class Database for entering and retrieving information from MongoDB
 Author: Sean Quiterio
-Date last modified: 30 November, 2021
+Date last modified: 7 December, 2021
 '''
 
 import DatabaseKeys
@@ -18,53 +18,63 @@ class Database:
         self.cluster = pymongo.MongoClient(
             'mongodb+srv://' + username + ':' + mongoPassword + '@cluster0.kvaed.mongodb.net/Cluster0?retryWrites=true&w=majority')
 
-    # Add, update
-    def insert_one(self, warehouse, _collection, attempt, outcomes):
-        db = self.cluster[warehouse]
-        collection = db[_collection]
-        msgID = "1$" + str(time.time())
-        lifter = warehouse
-        lift = _collection
+    # Add
+    def add(self, _competition, _lifter, data):
+        competition = self.cluster[_competition]
+        lifter = competition[_lifter]
+        msgID = '1$' + str(time.time())
 
-        if attempt < 0 or attempt > 3:
+        if data['attempt_number'] < 0 or data['attempt_number'] > 3:
             return False
-
-        elif len(outcomes) == 3:
-            total = 0
-            for result in outcomes:
-                total += result
-                if total < 2:
-                    overall = "Fail"
-                else:
-                    overall = "Pass"
+        total = 0
+        result = 'Error'
+        for judgement in data['judgements']:
+            if judgement:
+                total += 1
+        if total < 2:
+            result = 'Fail'
+        elif total != 'Error':
+            result = 'Pass'
         else:
             return False
 
-        document = {"MsgID": msgID, "lifter": lifter, "lift": lift, "attempt": attempt, "outcomes": outcomes, "overall": overall}
-        collection.insert_one(document)
+        document = {'MsgID': msgID, 'lifter': data['lifter'], 'lift': data['lift'], 'attempt_number': data['attempt_number'], 'weight': data['weight'], 'judgements': data['judgements'], 'result': result}
+        lifter.insert_one(document)
 
         return True
 
     # View
-    def find_all(self, warehouse, _collection=None, _attempt=None):
-        db = self.cluster[warehouse]
-        posts = []
-        if _collection == None:
-            for post in db.find():
-                posts.append(post)
-            return posts
-        elif _attempt == None:
-            collection = db[_collection]
-            for post in collection.find():
-                posts.append(post)
-            return posts
-        collection = db[_collection]
-        return collection.find_one({"attempt":_attempt})
+    def find(self, _competition, _lifter=None, query_key=None, query_value=None):
+        competition = self.cluster[_competition]
+        
+        matches = []
+        
+        # Search through all lifters
+        if _lifter == None:
+            for lifter in competition.getCollectionNames():
+                for match in competition[lifter].find({query_key: query_value}):
+                    matches.append(match)
+                return matches
+        # Search through specific lifter
+        lifter = competition[_lifter]
+        for match in lifter.find({query_key: query_value}):
+            matches.append(match)
+        return matches
 
     # Delete
-    def delete_many(self, warehouse, _collection=None, _attempt=None, query=None):
+    def delete(self, _competition, _lifter=None, query_key=None, query_value=None):
+        competition = self.cluster[_competition]
+        lifter = competition[_lifter]
+        
+        if query_key == 'clear_lifter':
+            return competition[lifter].drop()
+        
+        return lifter.deleteMany()
+        
+        
+            
         db = self.cluster[warehouse]
         if _collection == None:
             return db.deleteMany(query)
         collection = db[_collection]
-        return collection.deleteMany(query)
+        return collection.deleteMany({query_key: query_value})

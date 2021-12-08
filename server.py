@@ -1,3 +1,9 @@
+'''
+Class server for running a web server for queries and running a socket connection for input data
+Author: Connor Mackert
+Date last modified: 7 December, 2021
+'''
+
 from flask import Flask, jsonify, make_response, request
 from flask_httpauth import HTTPBasicAuth
 import requests
@@ -11,23 +17,25 @@ import Database
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
-db = Database()
+db = Database.Database()
 
 SOCKET_SIZE = 1024
-PORT = 5000
+PORT = 6000
 
 # View lifter info
 @app.route('/view', methods=['GET'])
 def view():
+    competition_name = request.args.get('competition_name')
     lifter_name = request.args.get('lifter_name')
-    lift_name = request.args.get('lift_name')
+    search_key = request.args.get('search_key')
+    search_value = request.args.get('search_value')
 
-    # Lifter data only
-    if lift_name == '':
-        lifter_data = db.Find_all(lifter_name)
-        return lifter_data
-    # Lifter data + lift data
-    lift_data = db.Find_all(lifter_name, lift_name)
+    # Search whole competition
+    if lifter_name == '':
+        lifter_data = db.find(_competition=competition_name, query_key=search_key, query_value=search_value)
+        return jsonify({'result': lifter_data})
+    # Search specific lifter
+    lifter_data = db.find(_competition=competition_name, _lifter=lifter_name, query_key=search_key, query_value=search_value)
     return lift_data
 
 # Change lifter info
@@ -49,7 +57,7 @@ def change():
         db.Delete_many(lifter_name, lift_name, attempt, outcome)
 
 def connect_to_recorder():
-    db = Database()
+    db = Database.Database()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('', PORT))
     s.listen()
@@ -77,6 +85,9 @@ def connect_to_recorder():
             break;
 
 if __name__ == '__main__':
-    socket_thread = threading.Thread(target=connect_to_recorder)
-    socket_thread.start()
-    #app.run(host='0.0.0.0')
+#     socket_thread = threading.Thread(target=connect_to_recorder)
+#     socket_thread.start()
+    db = Database.Database()
+    data = {'lifter': 'Connor Mackert', 'lift': 'Squat', 'attempt_number': 1, 'weight': '465 lbs', 'judgements': [True, True, False]}
+    db.add("USPA_Nationals", "Connor_Mackert", data)
+    #app.run(host='0.0.0.0', debug=True)
