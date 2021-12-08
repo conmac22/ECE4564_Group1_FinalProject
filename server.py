@@ -76,7 +76,7 @@ def add():
     
     # Error checking
     if competition_name == None:
-        return display_help_add()
+        return display_help_add ()
     if len(request.args) != 9:
         return 'Specify all 9 document fields to add data'
     
