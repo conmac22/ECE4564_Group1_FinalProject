@@ -16,61 +16,63 @@ class Camera:
         self.camera = PiCamera()
         self.camera.resolution = (640, 480)
         self.camera.framerate = 30
-        self.rawCapture = PiRGBArray(camera, size=(640,480))
-        pass
+        self.rawCapture = PiRGBArray(self.camera, size=(640,480))
+    
+    def deinit(self):
+        self.camera.close()
 
     def get_judgement(self):
         # running while loop just to make sure that
         # our program keep running untill we stop it
         #while True:
         #for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-        self.camera.capture(self.rawCapture, format="bgr", use_video_port=True):
+        self.camera.capture(self.rawCapture, format="bgr", use_video_port=True)
         # capturing the current frame
         #_, frame = vid.read()
+        img = self.rawCapture.array
 
-        # displaying the current frame
-        cv2.imshow("frame", self.rawCapture)
 
         # setting values for base colors
-        b = self.rawCapture[:, :, :1]
-        g = self.rawCapture[:, :, 1:2]
-        r = self.rawCapture[:, :, 2:]
+        b = img[:, :, 0]
+        g = img[:, :, 1]
+        r = img[:, :, 2]
 
         # computing the mean
         b_mean = np.mean(b)
         g_mean = np.mean(g)
         r_mean = np.mean(r)
-
+        
+        print("Means: blue-" + str(b_mean) + " green-" + str(g_mean) + " red-" + str(r_mean))
+        
+        self.rawCapture.truncate(0)
         # displaying the most prominent color
         if (r_mean > g_mean and r_mean > b_mean):
-            return "Red"
+            return False
         else:
-            return "White"
+            return True
         #result = input("Type White or Red: >")
         #return result
 
 def get_outcome():
     camera = Camera()
     judge = []
+    outcome = False
     good = 0
     no_good = 0
     for i in range(3):
-        input("Press any key for next judgement")
+        input("Press the enter key for judge: " + str(i + 1))
         judge.append(camera.get_judgement())
-        if judge[i] == "Red":
-            no_good += 1
-        elif judge[i] == "White":
+        if judge[i] == True:
             good += 1
-    if good > no_good:
-        outcome = "Pass"
-    elif no_good > good:
-        outcome = "Fail"
-
+        else:
+            no_good += 1
+    if good > 1:
+        outcome = True
+    camera.deinit()
     return judge, outcome
 
 if __name__ == "__main__":
     judge, outcome = get_outcome()
-    print("Judge 1: " + judge[0])
-    print("Judge 2: " + judge[1])
-    print("Judge 3: " + judge[2])
-    print("Outcome: " + outcome)
+    print("Judge 1: " + str(judge[0]))
+    print("Judge 2: " + str(judge[1]))
+    print("Judge 3: " + str(judge[2]))
