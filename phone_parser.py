@@ -5,17 +5,22 @@ Date last modified: 9 December, 2021
 '''
 
 # Example competition message: "Competition: <Name>"
-# Example message: "Lifter: <Name>, Lift: <Lift>, Attempt: <number>"
+# Example message: "Lifter: <Name>, Lift: <Lift>, Attempt: <number>, Weight: <lbs>"
 
 def parse_message(message):
-    message = message.trim()
+    message = message.strip()
     message_params = message.split(',')
+    print("message params: " + str(message_params))
     lifter = message_params[0].split(' ')[1]
-    lift = message_params[1].split(' ')[1]
-    attempt = message_params[2].split(' ')[1]
-    return lifter, lift, int(attempt)
+    lift = message_params[1].split(' ')[2]
+    attempt = message_params[2].split(' ')[2]
+    weight = message_params[3].split(' ')[2]
+    return lifter, lift, attempt, weight
 
-def parse_competition(message):
-    message = message.trim()
-    comp = message.spli(' ')
-    return comp[1]
+if __name__ == "__main__":
+    message = "Lifter: balls, Lift: Bench, Attempt: 1, Weight: 405"
+    lifter, lift, attempt, weight = parse_message(message)
+    print("lifter: " + lifter)
+    print("lift: " + lift)
+    print("attempt: " + attempt)
+    print("weight: " + weight)
