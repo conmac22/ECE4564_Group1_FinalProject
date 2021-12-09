@@ -179,9 +179,6 @@ def connect_to_recorder():
             print('Lift: ' + data_json['lift_name'])
             print('Attempt: ' + data_json['attempt_number'])
             print('Weight: ' + data_json['weight'])
-            print('Judgement 1: ' + data_json['judgement_one'])
-            print('Judgement 2: ' + data_json['judgement_two'])
-            print('Judgement 3: ' + data_json['judgement_three'])
             print('Result: ' + data_json['result'])
 
         except KeyboardInterrupt:
