@@ -1,17 +1,19 @@
 '''
 Class server for running a web server for queries and running a socket connection for input data
 Author: Connor Mackert
-Date last modified: 8 December, 2021
+Date last modified: 9 December, 2021
 '''
 
 from flask import Flask, jsonify, make_response, request
 from flask_httpauth import HTTPBasicAuth
 from bson.json_util import dumps as modified_dumps
+from cryptography.fernet import Fernet
 import requests
 import pymongo
 import Keys
 import pickle
 import socket
+import hashlib
 import threading
 import json
 import Database
@@ -21,7 +23,7 @@ auth = HTTPBasicAuth()
 db = Database.Database()
 
 SOCKET_SIZE = 1024
-PORT = 6000
+PORT = 6002
 
 # View lifter info
 @app.route('/view', methods=['GET'])
@@ -155,19 +157,32 @@ def connect_to_recorder():
     recorder, addr = s.accept()
     while True:
         try:
-            payload_serialized = client.recv(SOCKET_SIZE)
-            payload_json = pickle.loads(payload_serialized)
-            payload = json.load(payload_json)
-
-            lifter = payload['lifter']
-            lift = payload['lift']
-            attempt = payload['attempt']
-            attempt_one = payload['attempt_one']
-            attempt_two = payload['attempt_two']
-            attempt_three = payload['attempt_three']
-
-            db.Insert_one(lifter, lift, attempt, [attempt_one, attempt_two, attempt_three])
-            print("Lift recorded")
+            payload_serialized = recorder.recv(SOCKET_SIZE)
+            payload = pickle.loads(payload_serialized)
+            key = payload[0]
+            data_encrypted = payload[1]
+            checksum = payload[2]
+            encryption = Fernet(key)
+            
+            # Verify checksum
+            vChecksum = hashlib.md5(data_encrypted).hexdigest()
+            if checksum != vChecksum:
+                print('Checksum does not match')
+                sys.exit(1)
+                
+            data = encryption.decrypt(data_encrypted).decode()
+            data_json = json.loads(data)
+            db.add(data_json['competition_name'], data_json['lifter_name'], data_json)
+            print('***Lift recorded***')
+            print('Competition: ' + data_json['competition_name'])
+            print('Lifter: ' + data_json['lifter_name'])
+            print('Lift: ' + data_json['lift_name'])
+            print('Attempt: ' + data_json['attempt_number'])
+            print('Weight: ' + data_json['weight'])
+            print('Judgement 1: ' + data_json['judgement_one'])
+            print('Judgement 2: ' + data_json['judgement_two'])
+            print('Judgement 3: ' + data_json['judgement_three'])
+            print('Result: ' + data_json['result'])
 
         except KeyboardInterrupt:
             print('No longer connected to recorder')
@@ -175,6 +190,6 @@ def connect_to_recorder():
             break;
 
 if __name__ == '__main__':
-#     socket_thread = threading.Thread(target=connect_to_recorder)
-#     socket_thread.start()
-    app.run(host='0.0.0.0', debug=True)
+    socket_thread = threading.Thread(target=connect_to_recorder)
+    socket_thread.start()
+    app.run(host='0.0.0.0', port=50001, debug=False)

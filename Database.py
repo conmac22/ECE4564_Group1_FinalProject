@@ -22,24 +22,8 @@ class Database:
     def add(self, _competition, _lifter, data):
         competition = self.cluster[_competition]
         lifter = competition[_lifter]
-        
-        total = 0
-        result = 'Error'
-        for judgement in data['judgements']:
-            if judgement:
-                total += 1
-        if data['result'] == None:
-            if total < 2:
-                result = 'Fail'
-            elif total != 'Error':
-                result = 'Pass'
-            else:
-                return False
-        else:
-            result = data['result']
-        
 
-        document = {'lifter': data['lifter'], 'lift': data['lift'], 'attempt_number': data['attempt_number'], 'weight': data['weight'], 'judgements': data['judgements'], 'result': result}
+        document = {'lifter_name': data['lifter_name'], 'lift': data['lift_name'], 'attempt_number': data['attempt_number'], 'weight': data['weight'], 'judgements': data['judgements'], 'result': data['result']}
         return lifter.insert_one(document)
 
     # View
