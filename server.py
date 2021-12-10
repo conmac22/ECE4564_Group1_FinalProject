@@ -14,6 +14,7 @@ import Keys
 import pickle
 import socket
 import hashlib
+import argparse
 import threading
 import json
 import Database
@@ -23,7 +24,7 @@ auth = HTTPBasicAuth()
 db = Database.Database()
 
 SOCKET_SIZE = 1024
-PORT = 6002
+global PORT
 
 # View lifter info
 @app.route('/view', methods=['GET'])
@@ -36,6 +37,7 @@ def view():
     # Check validity
     if competition_name == None:
         return display_help_view()
+
     if search_key == None and search_value != None:
         return display_help_view()
     if search_key != None and search_value == None:
@@ -179,7 +181,7 @@ def connect_to_recorder():
             print('Lift: ' + data_json['lift_name'])
             print('Attempt: ' + data_json['attempt_number'])
             print('Weight: ' + data_json['weight'])
-            print('Result: ' + data_json['result'])
+            print('Result: ' + str(data_json['result']))
 
         except KeyboardInterrupt:
             print('No longer connected to recorder')
@@ -187,6 +189,12 @@ def connect_to_recorder():
             break;
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', type=int, required=True, help="Server Port Number", metavar="SERVER_PORT")
+    args = parser.parse_args()
+    global PORT
+    PORT = args.p
+    
     socket_thread = threading.Thread(target=connect_to_recorder)
     socket_thread.start()
     app.run(host='0.0.0.0', port=50001, debug=False)
