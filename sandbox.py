@@ -12,7 +12,7 @@ vid = cv2.VideoCapture(0)
 # our program keep running untill we stop it
 while True:
 
-    # capturing the current frame
+    # capturing the current framee
     _, frame = vid.read()
 
     # displaying the current frame
